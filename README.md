@@ -1,4 +1,8 @@
-# Cloudflare Worker WASM Interactions for Rust
+# Cloudflare Worker WASM Interactions for Rust 
+[![Latest Version]][crates.io]
+
+[Latest Version]: https://img.shields.io/crates/v/worker-wasm-interactions-rs.svg
+[crates.io]: https://crates.io/crates/worker-wasm-interactions-rs
 
 Simply build your interaction based discord bot on Cloudflare Workers using Rust.
 
