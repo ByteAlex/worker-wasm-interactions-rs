@@ -1,7 +1,13 @@
 [package]
 name = "worker-wasm-interactions-rs"
-version = "0.1.0"
+description = "A library for writing an interaction based discord bot on Cloudflare Workers."
+repository = "https://github.com/ByteAlex/worker-wasm-interactions-rs"
+version = "0.0.1"
+authors = ["Alexander Becker <abecker@bitflow.dev>"]
 edition = "2021"
+keywords = ["async", "api", "wasm", "http"]
+categories = ["Accessibility", "API bindings"]
+license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
