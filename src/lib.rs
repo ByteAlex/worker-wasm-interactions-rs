@@ -1,11 +1,10 @@
-mod util;
-mod example;
+pub mod util;
+pub mod rest;
 
 use std::collections::HashMap;
 use std::future::Future;
 use std::rc::Rc;
 use futures::future::LocalBoxFuture;
-use twilight_http::Client;
 use twilight_model::application::command::CommandOptionChoice;
 use twilight_model::application::component::Component;
 use twilight_model::application::interaction::{Interaction, InteractionData, InteractionType};
@@ -19,6 +18,9 @@ use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, UserMarker};
 use worker::*;
 use crate::util::ToOwnedString;
+use crate::rest::Client;
+
+pub use twilight_model;
 
 macro_rules! match_as {
     ($obj:expr, $otype:path) => {
@@ -30,11 +32,11 @@ macro_rules! match_as {
     };
 }
 
-trait RouterExt {
+pub trait RouterExt {
     fn interactions(self, pattern: &str) -> Self;
 }
 
-trait GetInteractionData {
+pub trait GetInteractionData {
     fn get_interactions(&self) -> &Interactions;
 }
 
@@ -59,17 +61,17 @@ pub struct CustomIdPattern {
 }
 
 impl CustomIdPattern {
-    pub fn starts_with(pattern: String) -> Self {
+    pub fn starts_with<S: ToOwnedString>(pattern: S) -> Self {
         Self {
-            starts_with: Some(pattern),
+            starts_with: Some(pattern.to_owned_string()),
             equals: None,
         }
     }
 
-    pub fn equals(custom_id: String) -> Self {
+    pub fn equals<S: ToOwnedString>(custom_id: S) -> Self {
         Self {
             starts_with: None,
-            equals: Some(custom_id),
+            equals: Some(custom_id.to_owned_string()),
         }
     }
 
@@ -146,16 +148,16 @@ impl<D> InteractionContext<D> {
             rest: Client::new(token),
         }
     }
-    
+
     pub fn guild_id(&self) -> Option<Id<GuildMarker>> {
         self.raw.guild_id
     }
-    
+
     pub fn user_id(&self) -> Option<Id<UserMarker>> {
-        self.raw.user.as_ref().map(|user| user.id)
+        self.raw.author_id()
     }
 
-    pub fn followup(&self, ephemeral: bool, message_builder: fn(&mut MessageBuilder) -> ()) -> Result<InteractionResponse> {
+    pub fn followup<F: FnOnce(&mut MessageBuilder) -> ()>(&self, ephemeral: bool, message_builder: F) -> Result<InteractionResponse> {
         let mut builder = MessageBuilder::default();
         message_builder(&mut builder);
         if ephemeral {
