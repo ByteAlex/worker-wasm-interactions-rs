@@ -21,6 +21,7 @@ use crate::util::ToOwnedString;
 use crate::rest::Client;
 
 pub use twilight_model;
+use worker::kv::KvStore;
 
 macro_rules! match_as {
     ($obj:expr, $otype:path) => {
@@ -90,6 +91,7 @@ pub struct InteractionContext<D> {
     pub raw: Interaction,
     pub data: D,
     pub rest: Client,
+    pub worker_env: Env
 }
 
 #[derive(Debug, Default)]
@@ -141,11 +143,12 @@ impl From<MessageBuilder> for InteractionResponseData {
 }
 
 impl<D> InteractionContext<D> {
-    fn create(interaction: Interaction, data: D, token: String) -> Self {
+    fn create(interaction: Interaction, data: D, token: String, worker_env: Env) -> Self {
         Self {
             raw: interaction,
             data,
             rest: Client::new(token),
+            worker_env,
         }
     }
 
@@ -171,6 +174,24 @@ impl<D> InteractionContext<D> {
             kind: InteractionResponseType::ChannelMessageWithSource,
             data: Some(InteractionResponseData::from(builder))
         })
+    }
+
+    // WORKER ENV BINDINGS
+
+    pub fn secret(&self, binding: &str) -> Result<Secret> {
+        self.worker_env.secret(binding)
+    }
+
+    pub fn var(&self, binding: &str) -> Result<Var> {
+        self.worker_env.var(binding)
+    }
+
+    pub fn kv(&self, binding: &str) -> Result<KvStore> {
+        KvStore::from_this(&self.worker_env, binding).map_err(From::from)
+    }
+
+    pub fn durable_object(&self, binding: &str) -> Result<ObjectNamespace> {
+        self.worker_env.durable_object(binding)
     }
 }
 
@@ -245,12 +266,12 @@ impl<'a, D: GetInteractionData + 'a> RouterExt for Router<'a, D> {
                 }),
                 InteractionType::ApplicationCommand => {
                     let command = match_as!(interaction.data.clone().expect("Missing data"), InteractionData::ApplicationCommand);
-                    let context = InteractionContext::create(interaction, command, interactions_lib.token.clone());
+                    let context = InteractionContext::create(interaction, command, interactions_lib.token.clone(), ctx.env);
                     interactions_lib.handle_application_command(context).await
                 }
                 InteractionType::MessageComponent => {
                     let component = match_as!(interaction.data.clone().expect("Missing data"), InteractionData::MessageComponent);
-                    let context = InteractionContext::create(interaction, component, interactions_lib.token.clone());
+                    let context = InteractionContext::create(interaction, component, interactions_lib.token.clone(), ctx.env);
                     interactions_lib.handle_message_component(context).await
                 }
                 _ => Response::error("Missing implementation", 400)
