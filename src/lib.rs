@@ -1,29 +1,25 @@
 pub mod util;
 pub mod rest;
+pub mod model;
 
 use std::collections::HashMap;
 use std::future::Future;
 use std::rc::Rc;
 use futures::future::LocalBoxFuture;
-use twilight_model::application::command::CommandOptionChoice;
-use twilight_model::application::component::Component;
 use twilight_model::application::interaction::{Interaction, InteractionData, InteractionType};
 use twilight_model::application::interaction::application_command::CommandData;
 use twilight_model::application::interaction::message_component::MessageComponentInteractionData;
-use twilight_model::channel::embed::Embed;
-use twilight_model::channel::message::{AllowedMentions, MessageFlags};
-use twilight_model::http::attachment::Attachment;
 use twilight_model::http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType};
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, UserMarker};
 use worker::*;
 use crate::util::ToOwnedString;
 use crate::rest::Client;
-use serde::Serialize;
-use serde_with::skip_serializing_none;
 
 pub use twilight_model;
+use twilight_model::channel::message::MessageFlags;
 use worker::kv::KvStore;
+use crate::model::MessageBuilder;
 
 macro_rules! match_as {
     ($obj:expr, $otype:path) => {
@@ -94,55 +90,6 @@ pub struct InteractionContext<D> {
     pub data: D,
     pub rest: Client,
     pub worker_env: Env
-}
-
-#[skip_serializing_none]
-#[derive(Debug, Default, Serialize)]
-pub struct MessageBuilder {
-    pub allowed_mentions: Option<AllowedMentions>,
-    pub attachments: Option<Vec<Attachment>>,
-    pub choices: Option<Vec<CommandOptionChoice>>,
-    pub components: Option<Vec<Component>>,
-    pub content: Option<String>,
-    pub custom_id: Option<String>,
-    pub embeds: Option<Vec<Embed>>,
-    pub flags: Option<MessageFlags>,
-    pub title: Option<String>,
-    pub tts: Option<bool>,
-}
-
-impl MessageBuilder {
-    pub fn content<S: ToOwnedString>(&mut self, content: S) -> &mut Self {
-        self.content = Some(content.to_owned_string());
-        self
-    }
-
-    pub fn custom_id<S: ToOwnedString>(&mut self, custom_id: S) -> &mut Self {
-        self.custom_id = Some(custom_id.to_owned_string());
-        self
-    }
-
-    pub fn title<S: ToOwnedString>(&mut self, title: S) -> &mut Self {
-        self.title = Some(title.to_owned_string());
-        self
-    }
-}
-
-impl From<MessageBuilder> for InteractionResponseData {
-    fn from(builder: MessageBuilder) -> Self {
-        Self {
-            allowed_mentions: builder.allowed_mentions,
-            attachments: builder.attachments,
-            choices: builder.choices,
-            components: builder.components,
-            content: builder.content,
-            custom_id: builder.custom_id,
-            embeds: builder.embeds,
-            flags: builder.flags,
-            title: builder.title,
-            tts: builder.tts,
-        }
-    }
 }
 
 impl<D> InteractionContext<D> {
