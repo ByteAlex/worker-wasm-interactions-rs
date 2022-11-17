@@ -45,7 +45,7 @@ impl Client {
         ).await
     }
 
-    pub async fn modify_guild_member<F: FnOnce(&mut MemberEditBuilder) -> ()>(&self, guild_id: &u64, member_id: &u64, builder_fn: F) -> Result<MemberIntermediary> {
+    pub async fn modify_guild_member<F: FnOnce(&mut MemberEditBuilder) -> ()>(&self, guild_id: &u64, member_id: &u64, builder_fn: F) -> Result<()> {
         let mut builder = MemberEditBuilder::default();
         builder_fn(&mut builder);
         self.client.request(Method::PATCH, format!("https://discord.com/api/guilds/{}/members/{}", guild_id, member_id))
@@ -53,9 +53,7 @@ impl Client {
             .json(&builder)
             .send()
             .await
-            .map_err(|err| Error::from(err.to_string()))?
-            .json()
-            .await
+            .map(|_| ())
             .map_err(|err| Error::from(err.to_string()))
     }
 
