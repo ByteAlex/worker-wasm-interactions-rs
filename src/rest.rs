@@ -49,6 +49,7 @@ impl Client {
         let mut builder = MemberEditBuilder::default();
         builder_fn(&mut builder);
         self.client.request(Method::PATCH, format!("https://discord.com/api/guilds/{}/members/{}", guild_id, member_id))
+            .header("Authorization", format!("Bot {}", self.token))
             .json(&builder)
             .send()
             .await
