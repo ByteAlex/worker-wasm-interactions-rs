@@ -1,11 +1,22 @@
-use crate::ToOwnedString;
+use crate::{MessageBuilder, ToOwnedString};
 use reqwest::{Client as HttpClient, Method, Response as HttpResponse};
 use serde::de::DeserializeOwned;
+use twilight_model::channel::Message;
+use twilight_model::channel::message::MessageFlags;
 use worker::*;
 
+#[derive(Debug, Clone)]
 pub struct Client {
     token: String,
     client: HttpClient,
+}
+
+#[derive(Debug, Clone)]
+pub struct RestInteraction {
+    client: HttpClient,
+    token: String,
+    app_id: u64,
+    ephemeral: bool,
 }
 
 impl Client {
@@ -13,6 +24,15 @@ impl Client {
         Self {
             token: token.to_owned_string(),
             client: HttpClient::default(),
+        }
+    }
+
+    pub fn interaction(&self, app_id: u64, interaction_token: String, ephemeral: bool) -> RestInteraction {
+        RestInteraction {
+            client: self.client.clone(),
+            token: interaction_token,
+            app_id,
+            ephemeral,
         }
     }
 
@@ -56,5 +76,27 @@ impl Client {
             }
             Err(err) => Err(Error::from(err.to_string())),
         }
+    }
+}
+
+impl RestInteraction {
+    pub async fn followup<F: FnOnce(&mut MessageBuilder) -> ()>(&self, message_builder: F) -> Result<Message> {
+        let mut builder = MessageBuilder::default();
+        message_builder(&mut builder);
+        if self.ephemeral {
+            if let Some(flags) = builder.flags.as_mut() {
+                flags.insert(MessageFlags::EPHEMERAL)
+            } else {
+                builder.flags = Some(MessageFlags::EPHEMERAL)
+            }
+        }
+        self.client.request(Method::POST, format!("https://discord.com/api/webhooks/{}/{}", self.app_id, self.token))
+            .json(&builder)
+            .send()
+            .await
+            .map_err(|err| Error::from(err.to_string()))?
+            .json()
+            .await
+            .map_err(|err| Error::from(err.to_string()))
     }
 }

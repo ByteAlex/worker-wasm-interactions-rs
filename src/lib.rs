@@ -19,6 +19,8 @@ use twilight_model::id::marker::{GuildMarker, UserMarker};
 use worker::*;
 use crate::util::ToOwnedString;
 use crate::rest::Client;
+use serde::Serialize;
+use serde_with::skip_serializing_none;
 
 pub use twilight_model;
 use worker::kv::KvStore;
@@ -94,7 +96,8 @@ pub struct InteractionContext<D> {
     pub worker_env: Env
 }
 
-#[derive(Debug, Default)]
+#[skip_serializing_none]
+#[derive(Debug, Default, Serialize)]
 pub struct MessageBuilder {
     pub allowed_mentions: Option<AllowedMentions>,
     pub attachments: Option<Vec<Attachment>>,
