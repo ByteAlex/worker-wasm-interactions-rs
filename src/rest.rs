@@ -41,7 +41,7 @@ impl Client {
     pub async fn get_guild_member(&self, guild_id: &u64, member_id: &u64) -> Result<MemberIntermediary> {
         self.request_json(
             Method::GET,
-            format!("https://discord.com/api/guilds/{}/members/{}", guild_id, member_id).as_str()
+            format!("https://discord.com/api/guilds/{}/members/{}", guild_id, member_id).as_str(),
         ).await
     }
 
@@ -78,6 +78,48 @@ impl Client {
             Method::DELETE,
             format!("https://discord.com/api/guilds/{}/members/{}/roles/{}", guild_id, member_id, role_id).as_str(),
             Some("Reaction Role invoked"),
+        ).await.map(|_| ())
+    }
+
+    pub async fn request_channel_messages(&self, channel_id: &u64,
+                                          around: Option<u64>, before: Option<u64>, after: Option<u64>,
+                                          limit: Option<u8>) -> Result<Vec<Message>> {
+        let mut base_url = format!("https://discord.com/api/channels/{}/messages", channel_id);
+        let mut first_query = true;
+        if let Some(around) = around {
+            first_query = false;
+            base_url.push_str("?around=");
+            base_url.push_str(around.to_string().as_str());
+        } else if let Some(before) = before {
+            first_query = false;
+            base_url.push_str("?before=");
+            base_url.push_str(before.to_string().as_str());
+        } else if let Some(after) = after {
+            first_query = false;
+            base_url.push_str("?after=");
+            base_url.push_str(after.to_string().as_str());
+        }
+        if let Some(limit) = limit {
+            if first_query {
+                base_url.push_str("?");
+            } else {
+                base_url.push_str("&");
+            }
+            base_url.push_str("limit=");
+            base_url.push_str(limit.to_string().as_str());
+        }
+        self.request_json(
+            Method::GET,
+            base_url.as_str(),
+        ).await
+    }
+
+    pub async fn delete_message<S: ToOwnedString>(&self, channel_id: &u64, message_id: &u64,
+                                                  audit_log_reason: Option<S>) -> Result<()> {
+        self.request(
+            Method::DELETE,
+            format!("https://discord.com/api/channels/{}/messages/{}", channel_id, message_id).as_str(),
+            audit_log_reason,
         ).await.map(|_| ())
     }
 
