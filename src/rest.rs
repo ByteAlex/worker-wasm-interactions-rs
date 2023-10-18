@@ -7,6 +7,21 @@ use twilight_model::guild::member::MemberIntermediary;
 use worker::*;
 use crate::model::MemberEditBuilder;
 
+macro_rules! handle_errors {
+    ($req:expr) => {
+        match $req {
+             Ok(res) => {
+                if res.status().is_success() {
+                    Ok(())
+                } else {
+                    Err(Error::from(res.text().await.map_err(|err| Error::from(err.to_string()))?))
+                }
+            }
+            Err(err) => Err(Error::from(err.to_string())),
+        }
+    };
+}
+
 #[derive(Debug, Clone)]
 pub struct Client {
     token: String,
@@ -48,20 +63,11 @@ impl Client {
     pub async fn modify_guild_member<F: FnOnce(&mut MemberEditBuilder) -> ()>(&self, guild_id: &u64, member_id: &u64, builder_fn: F) -> Result<()> {
         let mut builder = MemberEditBuilder::default();
         builder_fn(&mut builder);
-        match self.client.request(Method::PATCH, format!("https://discord.com/api/guilds/{}/members/{}", guild_id, member_id))
+        handle_errors!(self.client.request(Method::PATCH, format!("https://discord.com/api/guilds/{}/members/{}", guild_id, member_id))
             .header("Authorization", format!("Bot {}", self.token))
             .json(&builder)
             .send()
-            .await {
-            Ok(res) => {
-                if res.status().is_success() {
-                    Ok(())
-                } else {
-                    Err(Error::from(res.text().await.map_err(|err| Error::from(err.to_string()))?))
-                }
-            }
-            Err(err) => Err(Error::from(err.to_string())),
-        }
+            .await)
     }
 
     pub async fn add_guild_member_role(&self, guild_id: &u64, member_id: &u64, role_id: &u64) -> Result<()> {

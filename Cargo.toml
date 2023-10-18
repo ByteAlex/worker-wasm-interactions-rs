@@ -20,4 +20,4 @@ hex = "0.4.3"
 reqwest = { version = "0.11.12", features = ["json"] }
 twilight-model = "0.13.5"
 futures = "0.3.24"
-worker = "0.0.11"
+worker = "0.0.15"
